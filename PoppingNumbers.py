@@ -1,16 +1,19 @@
-import random
+import random #randomisation module
 
-class PoppingNumbersGame:
-    def __init__(self, board_size, numbers):
+class mitigateGame:
+    def __init__(self, board_size, numbers): #constructor method to initialize the newly created object by setting initial values for its attributes.  It is called automatically when you create a new instance of the class.
         self.board_size = board_size
         self.numbers = numbers
         self.board = [[' ' for _ in range(self.board_size)] for _ in range(self.board_size)]
         self.score = 0
 
-    def display_board(self):
+    def display_board(self): 
         for row in self.board:
-            print(' | '.join(str(cell) for cell in row))
-            print('-' * (self.board_size * 4 - 1))
+            formatted_row = []
+            for cell in row:
+                formatted_cell = f"[{cell:^3}]"  # Centered, with brackets
+                formatted_row.append(formatted_cell)
+            print(' '.join(formatted_row))
         print(f"Score: {self.score}")
 
     def place_number(self, num, row, col):
@@ -32,67 +35,98 @@ class PoppingNumbersGame:
             empty_cells.remove((row, col))
         return True
 
-    def check_and_remove_lines(self):
-        def check_line(cells):
-            if all(self.board[r][c] == self.board[cells[0][0]][cells[0][1]] != ' ' for r, c in cells):
+    def check_lines(self):
+        def is_line(cells):
+            first_value = self.board[cells[0][0]][cells[0][1]]
+            if all(self.board[r][c] == first_value != ' ' for r, c in cells):
                 for r, c in cells:
                     self.board[r][c] = ' '
                 return True
             return False
 
-        def check_directions(r, c):
+        def has_matching_line(r, c):
             directions = [
-                [(r+i, c) for i in range(3)],  # Horizontal
-                [(r, c+i) for i in range(3)],  # Vertical
-                [(r+i, c+i) for i in range(3)],  # Diagonal \
-                [(r+i, c-i) for i in range(3)]  # Diagonal /
+                [(r + i, c) for i in range(3)],      # Horizontal
+                [(r, c + i) for i in range(3)],      # Vertical
+                [(r + i, c + i) for i in range(3)],  # Diagonal \
+                [(r + i, c - i) for i in range(3)]   # Diagonal /
             ]
-            return any(check_line(direction) for direction in directions if all(0 <= nr < self.board_size and 0 <= nc < self.board_size for nr, nc in direction))
+            for direction in directions:
+                if all(0 <= nr < self.board_size and 0 <= nc < self.board_size for nr, nc in direction):
+                    if is_line(direction):
+                        return True
+            return False
+        
+        def extend_line(r, c, dr, dc):
+            value = self.board[r][c]
+            line_cells = [(r, c)]
+            nr, nc = r + dr, c + dc
+            while 0 <= nr < self.board_size and 0 <= nc < self.board_size and self.board[nr][nc] == value:
+                line_cells.append((nr, nc))
+                nr += dr
+                nc += dc
+            return line_cells if len(line_cells) >= 3 else []
 
         for r in range(self.board_size):
             for c in range(self.board_size):
-                if self.board[r][c] != ' ' and check_directions(r, c):
-                    self.score += 3
-                    return True
+                if self.board[r][c] != ' ':
+                    for dr, dc in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                        line_cells = extend_line(r, c, dr, dc)
+                        if line_cells:
+                            for cell in line_cells:
+                                self.board[cell[0]][cell[1]] = ' '
+                            self.score += len(line_cells)*100
+                            return True
         return False
 
     def is_board_full(self):
         return all(self.board[r][c] != ' ' for r in range(self.board_size) for c in range(self.board_size))
 
     def play(self):
-        print("Welcome to Popping Numbers!")
+        print("Welcome to Popping numbers!")
         while True:
             self.display_board()
-            try:
-                num = int(input(f"Enter the number to place ({', '.join(map(str, self.numbers))}): "))
-                row = int(input(f"Enter the row (0-{self.board_size-1}): "))
-                col = int(input(f"Enter the column (0-{self.board_size-1}): "))
-            except ValueError:
-                print("Invalid input. Please enter valid numbers.")
-                continue
 
-            if num not in self.numbers:
-                print(f"Invalid number. Choose from {', '.join(map(str, self.numbers))}.")
-                continue
+        # Get valid number input
+            while True:
+                try:
+                    num_str = input(f"Enter the number to place ({', '.join(map(str, self.numbers))}): ")
+                    num = int(num_str)
+                    if num not in self.numbers:
+                        print(f"Invalid number. Choose from {', '.join(map(str, self.numbers))}.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
 
-            if not (0 <= row < self.board_size and 0 <= col < self.board_size):
-                print(f"Invalid position. Choose row and column between 0 and {self.board_size-1}.")
-                continue
+        # Get valid row and column input
+            while True:
+                try:
+                    row_str = input(f"Enter the row (0-{self.board_size-1}): ")
+                    row = int(row_str)
+                    col_str = input(f"Enter the column (0-{self.board_size-1}): ")
+                    col = int(col_str)
+                    if not (0 <= row < self.board_size and 0 <= col < self.board_size):
+                        print(f"Invalid position. Choose row and column between 0 and {self.board_size-1}.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid input. Please enter numbers for row and column.")
 
             if self.place_number(num, row, col):
-                while self.check_and_remove_lines():
-                    pass
+                while self.check_lines():
+                 pass
 
                 if not self.generate_random_numbers():
                     print("No more space to place numbers. Game over!")
                     break
 
-                while self.check_and_remove_lines():
-                    pass
+            while self.check_lines():
+                pass
 
-                if self.is_board_full():
-                    print("Board is full. Game over!")
-                    break
+            if self.is_board_full():
+                print("Board is full. Game over!")
+                break
 
         print(f"Your final score: {self.score}")
 
@@ -115,7 +149,7 @@ def main():
         else:
             print("Invalid numbers. Please enter a string of digits between 0 and 9.")
 
-    game = PoppingNumbersGame(board_size, numbers)
+    game = mitigateGame(board_size, numbers)
     game.play()
 
 if __name__ == "__main__":
